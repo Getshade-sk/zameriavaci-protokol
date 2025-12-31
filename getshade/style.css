@@ -1,0 +1,89 @@
+* {
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+}
+
+body {
+    background: #f4f6f8;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.card {
+    background: white;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+}
+
+button {
+    padding: 10px 14px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.main-btn {
+    width: 100%;
+    background: #2563eb;
+    color: white;
+    font-size: 16px;
+}
+
+#googleLoginBtn {
+    background: #111827;
+    color: white;
+    margin-bottom: 16px;
+}
+
+.window-block {
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+}
+
+.photo-item {
+    display: inline-block;
+    position: relative;
+    margin: 4px;
+}
+
+.photo-item img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.remove-photo {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+}
+.phase-block,
+.plechy-block {
+    margin-top: 6px;
+}
