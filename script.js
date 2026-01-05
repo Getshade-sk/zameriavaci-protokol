@@ -150,7 +150,7 @@ function removePhoto(id, index) {
 }
 
 /***********************************************************
- *  FORM + PDF
+ *  FORM + PDF + GOOGLE DRIVE UPLOAD
  ***********************************************************/
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("orderForm");
@@ -208,6 +208,40 @@ document.addEventListener("DOMContentLoaded", () => {
       y += 5;
     });
 
+    // 1️⃣ Lokálne uloženie
     pdf.save(`${name}.pdf`);
+
+    // 2️⃣ Upload do Google Drive
+    if (!accessToken) {
+      alert("⚠️ Prihláste sa do Google Drive, aby bolo možné uložiť PDF online");
+      return;
+    }
+
+    const pdfBlob = pdf.output("blob");
+    const metadata = {
+      name: `${name}.pdf`,
+      mimeType: "application/pdf"
+    };
+
+    const formData = new FormData();
+    formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+    formData.append("file", pdfBlob);
+
+    try {
+      const res = await fetch(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+        {
+          method: "POST",
+          headers: { Authorization: "Bearer " + accessToken },
+          body: formData
+        }
+      );
+      const data = await res.json();
+      console.log("✅ Google Drive response:", data);
+      alert("✅ PDF bolo uložené aj do Google Drive!");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Chyba pri ukladaní PDF do Google Drive");
+    }
   });
 });
