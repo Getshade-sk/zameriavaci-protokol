@@ -160,12 +160,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF();
-
     await loadFont(pdf);
 
     let y = 10;
     const name = customerName.value || "Zakaznik";
 
+    // 1️⃣ Generovanie PDF
     pdf.setFontSize(16);
     pdf.text("Zameriavací protokol", 10, y);
     y += 10;
@@ -178,15 +178,10 @@ document.addEventListener("DOMContentLoaded", () => {
     pdf.text(`Dátum: ${measureDate.value}`, 10, y); y += 10;
 
     document.querySelectorAll(".window-block").forEach((w, i) => {
-      if (y > 260) {
-        pdf.addPage();
-        y = 10;
-        pdf.setFont("DejaVu");
-      }
+      if (y > 260) { pdf.addPage(); y = 10; pdf.setFont("DejaVu"); }
 
       pdf.setFontSize(13);
-      pdf.text(`Okno ${i + 1}`, 10, y);
-      y += 6;
+      pdf.text(`Okno ${i + 1}`, 10, y); y += 6;
 
       w.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.type !== "file" && el.value) {
@@ -197,10 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       (windowPhotos[w.dataset.id] || []).forEach((img) => {
-        if (y > 240) {
-          pdf.addPage();
-          y = 10;
-        }
+        if (y > 240) { pdf.addPage(); y = 10; }
         pdf.addImage(img, "JPEG", 10, y, 60, 45);
         y += 50;
       });
@@ -208,40 +200,75 @@ document.addEventListener("DOMContentLoaded", () => {
       y += 5;
     });
 
-    // 1️⃣ Lokálne uloženie
+    // 2️⃣ Lokálne uloženie
     pdf.save(`${name}.pdf`);
 
-    // 2️⃣ Upload do Google Drive
+    // 3️⃣ Upload do Google Drive
     if (!accessToken) {
-      alert("⚠️ Prihláste sa do Google Drive, aby bolo možné uložiť PDF online");
+      alert("⚠️ Prihláste sa do Google Drive pred uložením online!");
       return;
     }
 
     const pdfBlob = pdf.output("blob");
-    const metadata = {
-      name: `${name}.pdf`,
-      mimeType: "application/pdf"
-    };
 
-    const formData = new FormData();
-    formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-    formData.append("file", pdfBlob);
+    async function uploadToDrive(blob, fileName) {
+      let folderId;
 
-    try {
-      const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-        {
-          method: "POST",
-          headers: { Authorization: "Bearer " + accessToken },
-          body: formData
+      try {
+        // Skontroluj alebo vytvor priečinok "Zamerania"
+        const folderRes = await fetch(
+          "https://www.googleapis.com/drive/v3/files?q=name='Zamerania' and mimeType='application/vnd.google-apps.folder' and trashed=false",
+          { headers: { Authorization: "Bearer " + accessToken } }
+        );
+        const folderData = await folderRes.json();
+
+        if (folderData.files && folderData.files.length > 0) {
+          folderId = folderData.files[0].id;
+        } else {
+          const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "Zamerania", mimeType: "application/vnd.google-apps.folder" })
+          });
+          const createData = await createRes.json();
+          folderId = createData.id;
         }
+      } catch (err) {
+        console.error("Chyba priečinka:", err);
+        alert("❌ Nepodarilo sa pripraviť priečinok Zamerania v Drive");
+        return;
+      }
+
+      // Upload PDF
+      const formData = new FormData();
+      formData.append(
+        "metadata",
+        new Blob([JSON.stringify({ name: fileName, mimeType: "application/pdf", parents: [folderId] })], {
+          type: "application/json"
+        })
       );
-      const data = await res.json();
-      console.log("✅ Google Drive response:", data);
-      alert("✅ PDF bolo uložené aj do Google Drive!");
-    } catch (err) {
-      console.error(err);
-      alert("❌ Chyba pri ukladaní PDF do Google Drive");
+      formData.append("file", blob);
+
+      try {
+        const res = await fetch(
+          "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+          { method: "POST", headers: { Authorization: "Bearer " + accessToken }, body: formData }
+        );
+        const data = await res.json();
+        console.log("Drive upload response:", data);
+
+        if (data.id) alert("✅ PDF uložené do Google Drive (priečinok Zamerania)!");
+        else console.error("Chyba Drive upload:", data);
+
+      } catch (err) {
+        console.error("Chyba pri ukladaní PDF do Drive:", err);
+        alert("❌ Chyba pri ukladaní PDF do Google Drive");
+      }
     }
+
+    // Zavoláme upload
+    uploadToDrive(pdfBlob, `${name}.pdf`);
   });
 });
+
+
