@@ -75,11 +75,27 @@ function addWindow() {
     </label>
 
     <label>Typ tienenia
-      <select>
-        <option>Žalúzia</option>
-        <option>Roleta</option>
-        <option>Screen</option>
+      <select onchange="handleShadingChange(this)">
+        <option value="">-- vyber --</option>
+        <option value="Zaluzia">Žalúzia</option>
+        <option value="Roleta">Roleta</option>
+        <option value="Screen">Screen</option>
       </select>
+    </label>
+
+    <label class="zaluzia-only" style="display:none;">
+      Typ žalúzie
+      <select>
+        <option value="">-- vyber --</option>
+        <option>Z90</option>
+        <option>Z70</option>
+        <option>C80</option>
+      </select>
+    </label>
+
+    <label>
+      Farba
+      <input type="text" placeholder="napr. antracit, biela, RAL 7016...">
     </label>
 
     <label>Šírka (mm)
@@ -113,6 +129,24 @@ function addWindow() {
   document.getElementById("windows").appendChild(div);
 }
 
+function handleShadingChange(selectEl) {
+  const block = selectEl.closest(".window-block");
+  const zaluziaFields = block.querySelectorAll(".zaluzia-only");
+
+  if (selectEl.value === "Zaluzia") {
+    zaluziaFields.forEach(el => el.style.display = "block");
+  } else {
+    zaluziaFields.forEach(el => {
+      el.style.display = "none";
+      const input = el.querySelector("input, select");
+      if (input) input.value = "";
+    });
+  }
+}
+
+/***********************************************************
+ *  PHOTOS
+ ***********************************************************/
 function handlePhotos(e, id) {
   const files = Array.from(e.target.files);
   if (!windowPhotos[id]) windowPhotos[id] = [];
@@ -165,7 +199,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let y = 10;
     const name = customerName.value || "Zakaznik";
 
-    // 1️⃣ Generovanie PDF
     pdf.setFontSize(16);
     pdf.text("Zameriavací protokol", 10, y);
     y += 10;
@@ -200,10 +233,8 @@ document.addEventListener("DOMContentLoaded", () => {
       y += 5;
     });
 
-    // 2️⃣ Lokálne uloženie
     pdf.save(`${name}.pdf`);
 
-    // 3️⃣ Upload do Google Drive
     if (!accessToken) {
       alert("⚠️ Prihláste sa do Google Drive pred uložením online!");
       return;
@@ -215,7 +246,6 @@ document.addEventListener("DOMContentLoaded", () => {
       let folderId;
 
       try {
-        // Skontroluj alebo vytvor priečinok "Zamerania"
         const folderRes = await fetch(
           "https://www.googleapis.com/drive/v3/files?q=name='Zamerania' and mimeType='application/vnd.google-apps.folder' and trashed=false",
           { headers: { Authorization: "Bearer " + accessToken } }
@@ -239,7 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Upload PDF
       const formData = new FormData();
       formData.append(
         "metadata",
@@ -255,9 +284,8 @@ document.addEventListener("DOMContentLoaded", () => {
           { method: "POST", headers: { Authorization: "Bearer " + accessToken }, body: formData }
         );
         const data = await res.json();
-        console.log("Drive upload response:", data);
 
-        if (data.id) alert("✅ PDF uložené do Google Drive (priečinok Zamerania)!");
+        if (data.id) alert("✅ PDF uložené do Google Drive (Zamerania)!");
         else console.error("Chyba Drive upload:", data);
 
       } catch (err) {
@@ -266,9 +294,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Zavoláme upload
     uploadToDrive(pdfBlob, `${name}.pdf`);
   });
 });
-
-
